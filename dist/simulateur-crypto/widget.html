@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur Crypto — S'investir</title>
+<script>
+window.tailwind = { config: {
+  darkMode: 'class',
+  theme: { extend: { colors: {
+    'blue-light': '#94a3b8',
+    'blue-sky': '#7dd3fc',
+    'violet-blue': '#3730a3',
+    'sinvestir-green': '#22c55e',
+  }}}
+}};
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  body { background: #0B0F1A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .input-base {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: white;
+    padding: 10px 14px;
+    width: 100%;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .input-base:focus { border-color: #22c55e; }
+  .input-base::placeholder { color: #64748b; }
+  .btn-primary {
+    background: #22c55e;
+    color: #0B0F1A;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover { background: #4ade80; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: rgba(34,197,94,0.4); cursor: not-allowed; }
+  .kpi-card {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .dropdown-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.1s;
+  }
+  .dropdown-item:hover, .dropdown-item.active { background: rgba(34,197,94,0.15); }
+  .dropdown-item .symbol { color: #22c55e; font-size: 12px; font-weight: 600; min-width: 44px; }
+  .spinner { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+  select option { background: #1e293b; }
+  .chart-tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: #94a3b8;
+    transition: all 0.15s;
+  }
+  .chart-tab.active {
+    background: rgba(34,197,94,0.15);
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+</style>
+</head>
+<body class="min-h-screen text-white">
+
+<div class="p-4 sm:p-6">
+
+  <!-- Header -->
+  <div class="mb-5 flex items-center gap-3">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.5 14.5h-1v-5.5h1v5.5zm0-7.5h-1V7.5h1V9z" fill="#22c55e" opacity="0.3"/>
+      <circle cx="12" cy="12" r="9" stroke="#22c55e" stroke-width="1.5" opacity="0.4"/>
+      <path d="M9.5 8.5C9.5 7.12 10.62 6 12 6s2.5 1.12 2.5 2.5c0 1.02-.61 1.9-1.5 2.29V17h-2v-6.21c-.89-.39-1.5-1.27-1.5-2.29z" fill="#22c55e" opacity="0.8"/>
+      <path d="M8 14h2v1H8v-1zm6 0h2v1h-2v-1zm-3-2h2v1h-2v-1z" fill="#22c55e"/>
+    </svg>
+    <div>
+      <h2 class="text-base font-semibold text-white">Simulateur Crypto-monnaie</h2>
+      <p class="text-xs text-blue-light">Stratégie DCA · +10 000 cryptos</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+    <!-- Form -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Crypto search -->
+      <div>
+        <label class="block text-xs text-blue-light mb-1.5 font-medium">Crypto-monnaie</label>
+        <div class="relative" id="crypto-wrapper">
+          <input type="text" id="crypto-input" class="input-base" placeholder="Bitcoin, Ethereum…" autocomplete="off">
+          <div id="crypto-dropdown" class="dropdown-list hidden"></div>
+        </div>
+        <div id="crypto-selected" class="hidden mt-1.5 text-xs text-blue-light"></div>
+      </div>
+
+      <!-- Montant -->
+      <div>
+        <label class="block text-xs text-blue-light mb-1.5 font-medium">Montant par achat</label>
+        <div class="relative">
+          <input type="number" id="montant" class="input-base pr-10" value="100" min="1">
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-light text-sm">€</span>
+        </div>
+      </div>
+
+      <!-- Fréquence -->
+      <div>
+        <label class="block text-xs text-blue-light mb-1.5 font-medium">Fréquence</label>
+        <select id="freq" class="input-base">
+          <option value="weekly">Hebdomadaire</option>
+          <option value="monthly">Mensuel</option>
+          <option value="daily">Quotidien</option>
+          <option value="once">En une fois</option>
+        </select>
+      </div>
+
+      <!-- Dates -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-blue-light mb-1.5 font-medium">Du</label>
+          <input type="date" id="date-from" class="input-base" value="2018-01-01">
+        </div>
+        <div>
+          <label class="block text-xs text-blue-light mb-1.5 font-medium">Au</label>
+          <input type="date" id="date-to" class="input-base">
+        </div>
+      </div>
+
+      <!-- Button -->
+      <button id="simulate-btn" class="btn-primary" disabled>
+        <span id="btn-text">Choisir une crypto</span>
+      </button>
+
+      <!-- Error -->
+      <div id="error-msg" class="hidden text-xs text-red-400 mt-1"></div>
+    </div>
+
+    <!-- Chiffres clés -->
+    <div class="lg:col-span-3">
+      <p class="text-xs text-blue-light font-medium mb-3 uppercase tracking-wide">Chiffres clés</p>
+
+      <div id="kpi-loading" class="hidden items-center justify-center py-8 flex">
+        <svg class="spinner w-8 h-8 text-sinvestir-green" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/>
+          <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="ml-3 text-sm text-blue-light">Chargement des données…</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="kpi-card">
+          <p class="text-xs text-blue-light mb-1">Investi</p>
+          <p id="kpi-invested" class="text-xl font-semibold text-white">—</p>
+          <p id="kpi-invested-sub" class="text-xs text-blue-light mt-0.5 opacity-70"></p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-blue-light mb-1">Acquis</p>
+          <p id="kpi-acquired" class="text-xl font-semibold text-white">—</p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-blue-light mb-1">Prix moyen d'acquisition</p>
+          <p id="kpi-avg-price" class="text-xl font-semibold text-white">—</p>
+        </div>
+        <div class="kpi-card">
+          <p class="text-xs text-blue-light mb-1">Capital final</p>
+          <p id="kpi-value" class="text-xl font-semibold text-white">—</p>
+        </div>
+        <div class="kpi-card col-span-2">
+          <p class="text-xs text-blue-light mb-1">Performance</p>
+          <p id="kpi-perf" class="text-2xl font-bold text-white">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="mt-5">
+    <div class="flex gap-2 mb-3">
+      <button id="tab-historique" class="chart-tab active" onclick="window._switchTab('historique')">Historique</button>
+      <button id="tab-gains" class="chart-tab" onclick="window._switchTab('gains')">Gains / Pertes</button>
+    </div>
+    <div class="kpi-card" style="height: 260px; position: relative;">
+      <div id="chart-placeholder" class="absolute inset-0 flex items-center justify-center text-blue-light text-sm">
+        Sélectionnez une crypto pour afficher le graphique
+      </div>
+      <canvas id="sim-chart" class="hidden" style="height: 100% !important;"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  // ── Pre-seeded popular cryptos ──────────────────────────────────────────
+  const TOP = [
+    { id: 'bitcoin',       symbol: 'BTC',  name: 'Bitcoin' },
+    { id: 'ethereum',      symbol: 'ETH',  name: 'Ethereum' },
+    { id: 'solana',        symbol: 'SOL',  name: 'Solana' },
+    { id: 'ripple',        symbol: 'XRP',  name: 'XRP' },
+    { id: 'binancecoin',   symbol: 'BNB',  name: 'BNB' },
+    { id: 'cardano',       symbol: 'ADA',  name: 'Cardano' },
+    { id: 'dogecoin',      symbol: 'DOGE', name: 'Dogecoin' },
+    { id: 'avalanche-2',   symbol: 'AVAX', name: 'Avalanche' },
+    { id: 'polkadot',      symbol: 'DOT',  name: 'Polkadot' },
+    { id: 'chainlink',     symbol: 'LINK', name: 'Chainlink' },
+    { id: 'litecoin',      symbol: 'LTC',  name: 'Litecoin' },
+    { id: 'shiba-inu',     symbol: 'SHIB', name: 'Shiba Inu' },
+    { id: 'uniswap',       symbol: 'UNI',  name: 'Uniswap' },
+    { id: 'monero',        symbol: 'XMR',  name: 'Monero' },
+    { id: 'stellar',       symbol: 'XLM',  name: 'Stellar' },
+    { id: 'pepe',          symbol: 'PEPE', name: 'Pepe' },
+    { id: 'matic-network', symbol: 'MATIC',name: 'Polygon' },
+    { id: 'near',          symbol: 'NEAR', name: 'NEAR Protocol' },
+    { id: 'aptos',         symbol: 'APT',  name: 'Aptos' },
+    { id: 'sui',           symbol: 'SUI',  name: 'Sui' },
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let selectedCoin = null;
+  let allCoins = null;
+  let chart = null;
+  let debounceTimer = null;
+  let lastResult = null;
+  let activeTab = 'historique';
+
+  // ── Elements ───────────────────────────────────────────────────────────
+  const cryptoInput    = document.getElementById('crypto-input');
+  const dropdown       = document.getElementById('crypto-dropdown');
+  const cryptoSelected = document.getElementById('crypto-selected');
+  const montantEl      = document.getElementById('montant');
+  const freqEl         = document.getElementById('freq');
+  const fromEl         = document.getElementById('date-from');
+  const toEl           = document.getElementById('date-to');
+  const simulateBtn    = document.getElementById('simulate-btn');
+  const btnText        = document.getElementById('btn-text');
+  const errMsg         = document.getElementById('error-msg');
+  const kpiLoading     = document.getElementById('kpi-loading');
+
+  toEl.value = new Date().toISOString().split('T')[0];
+
+  // ── Tab switching ──────────────────────────────────────────────────────
+  window._switchTab = function(tab) {
+    activeTab = tab;
+    document.getElementById('tab-historique').classList.toggle('active', tab === 'historique');
+    document.getElementById('tab-gains').classList.toggle('active', tab === 'gains');
+    if (lastResult) renderChart(lastResult.chartData, tab);
+  };
+
+  // ── Dropdown ───────────────────────────────────────────────────────────
+  function renderDropdown(coins) {
+    if (!coins.length) { dropdown.classList.add('hidden'); return; }
+    dropdown.innerHTML = coins.map(c =>
+      `<div class="dropdown-item" data-id="${c.id}" data-name="${c.name}" data-symbol="${c.symbol}">
+        <span class="symbol">${c.symbol.toUpperCase()}</span>
+        <span class="text-white text-sm truncate">${c.name}</span>
+      </div>`
+    ).join('');
+    dropdown.querySelectorAll('.dropdown-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectCoin({ id: el.dataset.id, name: el.dataset.name, symbol: el.dataset.symbol });
+      });
+    });
+    dropdown.classList.remove('hidden');
+  }
+
+  function selectCoin(coin) {
+    selectedCoin = coin;
+    cryptoInput.value = `${coin.name} (${coin.symbol.toUpperCase()})`;
+    cryptoSelected.textContent = `ID : ${coin.id}`;
+    cryptoSelected.classList.remove('hidden');
+    dropdown.classList.add('hidden');
+    simulateBtn.disabled = false;
+    btnText.textContent = 'Simuler';
+  }
+
+  function filterCoins(query) {
+    const q = query.toLowerCase().trim();
+    if (!q) return TOP.slice(0, 10);
+    return TOP.filter(c =>
+      c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q)
+    );
+  }
+
+  async function searchAll(query) {
+    if (!allCoins) {
+      try {
+        const r = await fetch('https://api.coingecko.com/api/v3/coins/list');
+        if (r.ok) allCoins = await r.json();
+      } catch { return filterCoins(query); }
+    }
+    const q = query.toLowerCase();
+    return (allCoins || []).filter(c =>
+      c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q)
+    ).slice(0, 20);
+  }
+
+  cryptoInput.addEventListener('input', () => {
+    const q = cryptoInput.value.trim();
+    selectedCoin = null;
+    simulateBtn.disabled = true;
+    btnText.textContent = 'Choisir une crypto';
+    clearTimeout(debounceTimer);
+
+    const local = filterCoins(q);
+    renderDropdown(local.length ? local : []);
+
+    if (q.length >= 2) {
+      debounceTimer = setTimeout(async () => {
+        const all = await searchAll(q);
+        renderDropdown(all);
+      }, 350);
+    }
+  });
+
+  cryptoInput.addEventListener('focus', () => {
+    if (!cryptoInput.value) renderDropdown(TOP.slice(0, 10));
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('crypto-wrapper').contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  // ── Fetch price history ────────────────────────────────────────────────
+  async function fetchPrices(coinId) {
+    const urls = [
+      `/coins/${coinId}/market_chart?vs_currency=eur&days=max&interval=weekly`,
+      `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=eur&days=max&interval=weekly`,
+    ];
+    for (const url of urls) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) {
+          const data = await r.json();
+          if (data.prices && data.prices.length) return data.prices;
+        }
+      } catch {}
+    }
+    throw new Error('Impossible de récupérer les données de prix.');
+  }
+
+  // ── DCA Calculation ────────────────────────────────────────────────────
+  function calcDCA(prices, montant, freq, fromDate, toDate) {
+    const fromMs = new Date(fromDate).getTime();
+    const toMs   = new Date(toDate).getTime();
+    const filtered = prices.filter(([ts]) => ts >= fromMs && ts <= toMs);
+    if (filtered.length < 2) return null;
+
+    if (freq === 'once') {
+      const [, firstPrice] = filtered[0];
+      const units = montant / firstPrice;
+      const lastPrice = filtered[filtered.length - 1][1];
+      const chartData = filtered.map(([ts, p]) => ({
+        date: new Date(ts), value: units * p, invested: montant,
+      }));
+      return {
+        invested: montant, value: units * lastPrice,
+        totalUnits: units, avgPrice: firstPrice,
+        purchaseCount: 1, freq,
+        chartData,
+      };
+    }
+
+    const INTERVAL = { daily: 86400000, weekly: 604800000, monthly: 30 * 86400000 };
+    const interval = INTERVAL[freq];
+    let totalInvested = 0, totalUnits = 0, lastPurchaseMs = null, purchaseCount = 0;
+    const chartData = [];
+
+    for (const [ts, price] of filtered) {
+      if (price <= 0) continue;
+      if (lastPurchaseMs === null || (ts - lastPurchaseMs) >= interval) {
+        totalUnits += montant / price;
+        totalInvested += montant;
+        lastPurchaseMs = ts;
+        purchaseCount++;
+      }
+      chartData.push({ date: new Date(ts), value: totalUnits * price, invested: totalInvested });
+    }
+
+    const lastPrice = filtered[filtered.length - 1][1];
+    return {
+      invested: totalInvested, value: totalUnits * lastPrice,
+      totalUnits, avgPrice: totalUnits > 0 ? totalInvested / totalUnits : 0,
+      purchaseCount, freq,
+      chartData,
+    };
+  }
+
+  // ── Formatting ─────────────────────────────────────────────────────────
+  function fmtEur(n) {
+    const abs = Math.abs(n);
+    if (abs >= 1e6) return '€' + (n / 1e6).toFixed(2).replace('.', ',') + ' M';
+    if (abs >= 1e3) return '€' + n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '€' + n.toFixed(2).replace('.', ',');
+  }
+
+  function fmtPct(n) {
+    const sign = n >= 0 ? '+' : '';
+    return sign + n.toFixed(2).replace('.', ',') + '%';
+  }
+
+  function cryptoDisplay(units, symbol) {
+    const sym = symbol.toUpperCase();
+    if (sym === 'BTC') return '₿' + units.toFixed(8);
+    if (sym === 'ETH') return 'Ξ' + units.toFixed(6);
+    if (units < 0.001) return units.toFixed(8) + ' ' + sym;
+    return units.toFixed(6) + ' ' + sym;
+  }
+
+  const FREQ_LABEL = { weekly: 'semaines', monthly: 'mois', daily: 'jours' };
+
+  // ── Render KPIs ─────────────────────────────────────────────────────────
+  function renderKPIs(result, coin) {
+    const perf = result.invested > 0 ? ((result.value - result.invested) / result.invested) * 100 : 0;
+
+    document.getElementById('kpi-invested').textContent = fmtEur(result.invested);
+    const subLabel = FREQ_LABEL[result.freq]
+      ? `en ${result.purchaseCount} ${FREQ_LABEL[result.freq]}`
+      : '';
+    document.getElementById('kpi-invested-sub').textContent = subLabel;
+
+    document.getElementById('kpi-acquired').textContent = cryptoDisplay(result.totalUnits, coin.symbol);
+    document.getElementById('kpi-avg-price').textContent = fmtEur(result.avgPrice);
+    document.getElementById('kpi-value').textContent     = fmtEur(result.value);
+
+    const perfEl = document.getElementById('kpi-perf');
+    perfEl.textContent = fmtPct(perf);
+    perfEl.className = 'text-2xl font-bold ' + (perf >= 0 ? 'text-green-400' : 'text-red-400');
+  }
+
+  // ── Render Chart ───────────────────────────────────────────────────────
+  function renderChart(chartData, tab) {
+    const canvas = document.getElementById('sim-chart');
+    document.getElementById('chart-placeholder').classList.add('hidden');
+    canvas.classList.remove('hidden');
+
+    const step = Math.max(1, Math.floor(chartData.length / 60));
+    const sampled = chartData.filter((_, i) => i % step === 0 || i === chartData.length - 1);
+    const labels = sampled.map(d => d.date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short' }));
+
+    let datasets;
+    if (tab === 'gains') {
+      const gains = sampled.map(d => d.value - d.invested);
+      datasets = [{
+        label: 'Gains / Pertes',
+        data: gains,
+        borderColor: '#22c55e',
+        backgroundColor: ctx => {
+          const grad = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+          grad.addColorStop(0, 'rgba(34,197,94,0.25)');
+          grad.addColorStop(1, 'rgba(34,197,94,0.02)');
+          return grad;
+        },
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 0,
+        fill: true,
+      }];
+    } else {
+      datasets = [
+        {
+          label: 'Capital final',
+          data: sampled.map(d => d.value),
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.08)',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 0,
+          fill: true,
+        },
+        {
+          label: 'Montant investi',
+          data: sampled.map(d => d.invested),
+          borderColor: '#7dd3fc',
+          backgroundColor: 'rgba(125,211,252,0.04)',
+          borderWidth: 2,
+          tension: 0,
+          pointRadius: 0,
+          fill: true,
+        },
+      ];
+    }
+
+    if (chart) chart.destroy();
+    chart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 12 }, boxWidth: 24 } },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#fff',
+            callbacks: { label: ctx => `${ctx.dataset.label} : ${fmtEur(ctx.parsed.y)}` },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 11 } },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          },
+          y: {
+            ticks: { color: '#64748b', callback: v => fmtEur(v), font: { size: 11 } },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Simulate ───────────────────────────────────────────────────────────
+  simulateBtn.addEventListener('click', async () => {
+    if (!selectedCoin) return;
+    errMsg.classList.add('hidden');
+    kpiLoading.classList.remove('hidden');
+    simulateBtn.disabled = true;
+    btnText.textContent = 'Calcul en cours…';
+
+    try {
+      const prices  = await fetchPrices(selectedCoin.id);
+      const montant = parseFloat(montantEl.value) || 100;
+      const freq    = freqEl.value;
+      const from    = fromEl.value;
+      const to      = toEl.value;
+
+      const result = calcDCA(prices, montant, freq, from, to);
+      if (!result) {
+        showError('Pas assez de données sur la période sélectionnée.');
+        return;
+      }
+
+      lastResult = result;
+      kpiLoading.classList.add('hidden');
+      renderKPIs(result, selectedCoin);
+      renderChart(result.chartData, activeTab);
+    } catch (e) {
+      showError(e.message || 'Erreur lors de la simulation.');
+    } finally {
+      simulateBtn.disabled = false;
+      btnText.textContent = 'Simuler';
+      kpiLoading.classList.add('hidden');
+    }
+  });
+
+  function showError(msg) {
+    errMsg.textContent = msg;
+    errMsg.classList.remove('hidden');
+    kpiLoading.classList.add('hidden');
+  }
+
+  [montantEl, freqEl, fromEl, toEl].forEach(el => {
+    el.addEventListener('change', () => {
+      if (selectedCoin && !simulateBtn.disabled) simulateBtn.click();
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

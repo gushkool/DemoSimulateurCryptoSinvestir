@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark-mode">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur Crypto-monnaie — S'investir Simulateurs</title>
+<meta name="description" content="Calculez vos gains en crypto avec une stratégie DCA ou en investissement unique. Bitcoin, Ethereum, et +10 000 cryptos.">
+<script>
+window.tailwind = { config: {
+  darkMode: 'class',
+  theme: { extend: { colors: {
+    'blue-light': '#94a3b8',
+    'blue-sky': '#7dd3fc',
+    'violet-blue': '#3730a3',
+    'sinvestir-green': '#22c55e',
+  }}}
+}};
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  html, body { background: #0B0F1A; }
+  .sidebar-gradient { background: radial-gradient(228.26% 65.64% at 100% 2.53%, rgba(255,255,255,0.1) 0%, rgba(16,27,68,0.1) 100%); }
+  .nav-link { display:flex; align-items:center; gap:12px; padding:12px 24px; font-size:14px; font-weight:400; color:rgba(255,255,255,0.35); border-left:2px solid transparent; transition:all 0.3s; white-space:nowrap; text-decoration:none; }
+  .nav-link:hover { color:white; background:rgba(255,255,255,0.05); }
+  .nav-link.active { color:white; border-left-color:#22c55e; background:rgba(34,197,94,0.08); }
+  .nav-icon { width:20px; height:20px; flex-shrink:0; }
+  .input-base { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:white; padding:10px 14px; width:100%; font-size:14px; transition:border-color 0.2s; outline:none; font-family:inherit; }
+  .input-base:focus { border-color:#22c55e; }
+  .input-base::placeholder { color:#64748b; }
+  .btn-primary { background:#22c55e; color:#0B0F1A; font-weight:600; border:none; border-radius:8px; padding:12px 24px; cursor:pointer; font-size:14px; width:100%; transition:background 0.2s,transform 0.1s; font-family:inherit; }
+  .btn-primary:hover { background:#4ade80; }
+  .btn-primary:active { transform:scale(0.98); }
+  .btn-primary:disabled { background:rgba(34,197,94,0.4); cursor:not-allowed; }
+  .kpi-card { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:20px 24px; }
+  .card { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:32px; }
+  .dropdown-list { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#1e293b; border:1px solid rgba(255,255,255,0.15); border-radius:8px; max-height:240px; overflow-y:auto; z-index:200; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
+  .dropdown-item { padding:10px 14px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:10px; transition:background 0.1s; }
+  .dropdown-item:hover { background:rgba(34,197,94,0.15); }
+  .dropdown-item .sym { color:#22c55e; font-size:12px; font-weight:600; min-width:44px; }
+  .spinner { animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
+  select option { background:#1e293b; }
+  #mobile-sidebar { transform:translateX(-100%); transition:transform 0.3s ease; }
+  #mobile-sidebar.open { transform:translateX(0); }
+  .overlay { opacity:0; pointer-events:none; transition:opacity 0.3s; }
+  .overlay.open { opacity:1; pointer-events:auto; }
+  .chart-tab { padding:6px 16px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; transition:all 0.15s; font-family:inherit; }
+  .chart-tab.active { background:rgba(34,197,94,0.15); border-color:#22c55e; color:#22c55e; }
+</style>
+</head>
+<body class="min-h-screen text-white" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+
+<!-- Mobile overlay -->
+<div id="overlay" class="overlay fixed inset-0 bg-black/60 z-40" onclick="closeSidebar()"></div>
+
+<!-- Mobile sidebar -->
+<div id="mobile-sidebar" class="fixed inset-y-0 left-0 z-50 w-[280px] lg:hidden">
+  <div class="h-full sidebar-gradient border-r border-white/10 flex flex-col p-6 gap-8">
+    <div class="flex items-center gap-3 px-2">
+      <div class="w-8 h-8 rounded-full bg-sinvestir-green/20 border border-sinvestir-green/40 flex items-center justify-center">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="#22c55e"><circle cx="12" cy="12" r="8" opacity="0.3"/><path d="M8 12h8M12 8v8" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <span class="text-white font-semibold text-sm">S'investir Simulateurs</span>
+    </div>
+    <nav class="flex-1">
+      <ul class="space-y-1">
+        <li><a href="../" class="nav-link"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1" stroke-width="1.5"/><rect x="13" y="3" width="8" height="8" rx="1" stroke-width="1.5"/><rect x="3" y="13" width="8" height="8" rx="1" stroke-width="1.5"/><rect x="13" y="13" width="8" height="8" rx="1" stroke-width="1.5"/></svg>Tableau de bord</a></li>
+        <li><a href="../" class="nav-link active"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 9h18v4H3zM3 15h18v4H3z" stroke-width="1.5" stroke-linecap="round"/></svg>Les simulateurs</a></li>
+        <li><a href="#" class="nav-link opacity-50 pointer-events-none"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke-width="1.5" stroke-linecap="round"/></svg>Les comparateurs</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Desktop sidebar -->
+<div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col p-6 lg:w-[300px]">
+  <div class="flex grow flex-col gap-10 overflow-y-auto border border-white/10 rounded-2xl sidebar-gradient py-6">
+    <!-- User info -->
+    <div class="flex items-center gap-3 px-6">
+      <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-medium">S</div>
+      <div class="min-w-0">
+        <p class="text-sm text-white truncate">S'investir Simulateurs</p>
+        <p class="text-xs text-blue-light truncate">simulateurs.sinvestir.fr</p>
+      </div>
+    </div>
+    <!-- Nav -->
+    <nav class="flex flex-1 flex-col">
+      <ul class="flex flex-1 flex-col justify-between gap-7">
+        <li>
+          <ul class="space-y-1">
+            <li><a href="../" class="nav-link">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1" stroke-width="1.5"/><rect x="13" y="3" width="8" height="8" rx="1" stroke-width="1.5"/><rect x="3" y="13" width="8" height="8" rx="1" stroke-width="1.5"/><rect x="13" y="13" width="8" height="8" rx="1" stroke-width="1.5"/></svg>
+              Tableau de bord
+            </a></li>
+            <li><a href="../" class="nav-link active">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Les simulateurs
+            </a></li>
+            <li><a href="#" class="nav-link" style="opacity:.4;pointer-events:none">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke-width="1.5" stroke-linecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke-width="1.5"/></svg>
+              Les comparateurs
+            </a></li>
+            <li><a href="#" class="nav-link" style="opacity:.4;pointer-events:none">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" stroke-width="1.5"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" stroke-width="1.5"/></svg>
+              Mes simulations
+            </a></li>
+          </ul>
+        </li>
+        <li class="px-6">
+          <a href="#" class="flex items-center gap-2 text-xs text-blue-light hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            Formation offerte
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="lg:pl-[300px]">
+
+  <!-- Topbar -->
+  <div class="flex justify-between items-center px-4 sm:px-6 lg:px-8 py-4 border-b border-white/5">
+    <button onclick="openSidebar()" class="lg:hidden p-2 text-white rounded-lg hover:bg-white/5 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded-full bg-sinvestir-green/20 border border-sinvestir-green/40 flex items-center justify-center">
+        <svg viewBox="0 0 12 12" width="10" height="10" fill="#22c55e"><circle cx="6" cy="6" r="5" opacity="0.4"/><path d="M4 6h4M6 4v4" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span class="text-white text-sm font-semibold">S'investir</span>
+    </div>
+    <div class="hidden sm:flex items-center gap-5 text-blue-light text-sm font-light">
+      <a href="#" class="hover:text-white transition-colors">Accueil</a>
+      <a href="../" class="hover:text-white transition-colors">Simulateurs</a>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="pt-0 pb-12 sm:py-10">
+    <div class="px-4 sm:px-6 lg:px-8">
+
+      <!-- Breadcrumb -->
+      <nav class="flex items-center gap-2 text-xs text-blue-light mb-6 mt-6">
+        <a href="../" class="hover:text-white transition-colors">Simulateurs</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span class="text-white">Crypto-monnaie</span>
+      </nav>
+
+      <!-- Page header -->
+      <div class="mb-8">
+        <h1 class="text-2xl lg:text-3xl font-normal text-white mb-2 tracking-tight">Simulateur Crypto-monnaie</h1>
+        <p class="text-blue-light text-sm font-light">Calculez vos gains en crypto avec une stratégie DCA ou en investissement unique. Bitcoin, Ethereum, et +10 000 cryptos.</p>
+      </div>
+
+      <!-- Simulator card -->
+      <div class="card mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
+
+          <!-- Form -->
+          <div class="lg:col-span-2 space-y-5">
+            <h3 class="text-sm font-medium text-white/70 uppercase tracking-wide">Paramètres</h3>
+
+            <div>
+              <label class="block text-xs text-blue-light mb-2">Crypto-monnaie</label>
+              <div class="relative" id="crypto-wrapper">
+                <input type="text" id="crypto-input" class="input-base" placeholder="Bitcoin, Ethereum, SOL…" autocomplete="off">
+                <div id="crypto-dropdown" class="dropdown-list hidden"></div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs text-blue-light mb-2">Montant par achat</label>
+              <div class="relative">
+                <input type="number" id="montant" class="input-base" style="padding-right:40px" value="100" min="1">
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-light text-sm">€</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs text-blue-light mb-2">Fréquence</label>
+              <select id="freq" class="input-base">
+                <option value="weekly">Hebdomadaire</option>
+                <option value="monthly">Mensuel</option>
+                <option value="daily">Quotidien</option>
+                <option value="once">En une fois</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-blue-light mb-2">Du</label>
+                <input type="date" id="date-from" class="input-base" value="2018-01-01">
+              </div>
+              <div>
+                <label class="block text-xs text-blue-light mb-2">Au</label>
+                <input type="date" id="date-to" class="input-base">
+              </div>
+            </div>
+
+            <button id="simulate-btn" class="btn-primary" disabled>
+              <span id="btn-text">Sélectionner une crypto</span>
+            </button>
+
+            <div id="error-msg" class="hidden text-xs text-red-400"></div>
+          </div>
+
+          <!-- Chiffres clés -->
+          <div class="lg:col-span-3">
+            <h3 class="text-sm font-medium text-white/70 uppercase tracking-wide mb-5">Chiffres clés</h3>
+
+            <div id="kpi-loading" class="hidden flex items-center gap-3 py-12 justify-center">
+              <svg class="spinner w-7 h-7 text-sinvestir-green" fill="none" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.2"/>
+                <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              <span class="text-sm text-blue-light">Récupération des données…</span>
+            </div>
+
+            <div id="kpi-grid" class="grid grid-cols-2 gap-4">
+              <div class="kpi-card">
+                <p class="text-xs text-blue-light mb-2">Investi</p>
+                <p id="kpi-invested" class="text-2xl font-semibold text-white">—</p>
+                <p id="kpi-invested-sub" class="text-xs text-blue-light mt-0.5 opacity-70"></p>
+              </div>
+              <div class="kpi-card">
+                <p class="text-xs text-blue-light mb-2">Acquis</p>
+                <p id="kpi-acquired" class="text-2xl font-semibold text-white">—</p>
+              </div>
+              <div class="kpi-card">
+                <p class="text-xs text-blue-light mb-2">Prix moyen d'acquisition</p>
+                <p id="kpi-avg-price" class="text-2xl font-semibold text-white">—</p>
+              </div>
+              <div class="kpi-card">
+                <p class="text-xs text-blue-light mb-2">Capital final</p>
+                <p id="kpi-value" class="text-2xl font-semibold text-white">—</p>
+              </div>
+              <div class="kpi-card col-span-2">
+                <p class="text-xs text-blue-light mb-2">Performance</p>
+                <p id="kpi-perf" class="text-2xl font-bold text-white">—</p>
+              </div>
+            </div>
+
+            <!-- Embed hint -->
+            <div class="mt-4 p-3 rounded-lg border border-white/5 bg-white/[1.5%]">
+              <p class="text-xs text-blue-light/60">
+                <span class="text-blue-light font-medium">Widget intégrable</span> — Ce simulateur est disponible en version embarquable :
+                <code class="ml-1 text-xs bg-white/5 px-2 py-0.5 rounded text-blue-sky">&lt;iframe src="widget.html"&gt;</code>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="card">
+        <div class="flex gap-2 mb-4">
+          <button id="tab-historique" class="chart-tab active" onclick="window._switchTab('historique')">Historique</button>
+          <button id="tab-gains" class="chart-tab" onclick="window._switchTab('gains')">Gains / Pertes</button>
+        </div>
+        <div style="position:relative; height:320px;">
+          <div id="chart-placeholder" class="absolute inset-0 flex items-center justify-center text-blue-light/50 text-sm">
+            Lancez une simulation pour afficher le graphique
+          </div>
+          <canvas id="sim-chart" class="hidden" style="height:100% !important"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const TOP = [
+    { id:'bitcoin',       symbol:'BTC',  name:'Bitcoin' },
+    { id:'ethereum',      symbol:'ETH',  name:'Ethereum' },
+    { id:'solana',        symbol:'SOL',  name:'Solana' },
+    { id:'ripple',        symbol:'XRP',  name:'XRP' },
+    { id:'binancecoin',   symbol:'BNB',  name:'BNB' },
+    { id:'cardano',       symbol:'ADA',  name:'Cardano' },
+    { id:'dogecoin',      symbol:'DOGE', name:'Dogecoin' },
+    { id:'avalanche-2',   symbol:'AVAX', name:'Avalanche' },
+    { id:'polkadot',      symbol:'DOT',  name:'Polkadot' },
+    { id:'chainlink',     symbol:'LINK', name:'Chainlink' },
+    { id:'litecoin',      symbol:'LTC',  name:'Litecoin' },
+    { id:'shiba-inu',     symbol:'SHIB', name:'Shiba Inu' },
+    { id:'uniswap',       symbol:'UNI',  name:'Uniswap' },
+    { id:'monero',        symbol:'XMR',  name:'Monero' },
+    { id:'stellar',       symbol:'XLM',  name:'Stellar' },
+    { id:'pepe',          symbol:'PEPE', name:'Pepe' },
+    { id:'matic-network', symbol:'MATIC',name:'Polygon' },
+    { id:'near',          symbol:'NEAR', name:'NEAR Protocol' },
+    { id:'aptos',         symbol:'APT',  name:'Aptos' },
+    { id:'sui',           symbol:'SUI',  name:'Sui' },
+  ];
+
+  let selectedCoin = null, allCoins = null, chart = null, debounceTimer = null;
+  let lastResult = null, activeTab = 'historique';
+
+  window._switchTab = function(tab) {
+    activeTab = tab;
+    document.getElementById('tab-historique').classList.toggle('active', tab === 'historique');
+    document.getElementById('tab-gains').classList.toggle('active', tab === 'gains');
+    if (lastResult) renderChart(lastResult.chartData, tab);
+  };
+
+  const $ = id => document.getElementById(id);
+  const cryptoInput = $('crypto-input');
+  const dropdown    = $('crypto-dropdown');
+  const montantEl   = $('montant');
+  const freqEl      = $('freq');
+  const fromEl      = $('date-from');
+  const toEl        = $('date-to');
+  const simBtn      = $('simulate-btn');
+  const btnText     = $('btn-text');
+  const errMsg      = $('error-msg');
+  const kpiLoading  = $('kpi-loading');
+
+  toEl.value = new Date().toISOString().split('T')[0];
+
+  function renderDropdown(coins) {
+    if (!coins.length) { dropdown.classList.add('hidden'); return; }
+    dropdown.innerHTML = coins.map(c =>
+      `<div class="dropdown-item" data-id="${c.id}" data-name="${c.name}" data-symbol="${c.symbol}">
+        <span class="sym">${c.symbol.toUpperCase()}</span>
+        <span style="color:white;font-size:14px">${c.name}</span>
+      </div>`
+    ).join('');
+    dropdown.querySelectorAll('.dropdown-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectCoin({ id:el.dataset.id, name:el.dataset.name, symbol:el.dataset.symbol });
+      });
+    });
+    dropdown.classList.remove('hidden');
+  }
+
+  function selectCoin(coin) {
+    selectedCoin = coin;
+    cryptoInput.value = `${coin.name} (${coin.symbol.toUpperCase()})`;
+    dropdown.classList.add('hidden');
+    simBtn.disabled = false;
+    btnText.textContent = 'Simuler';
+  }
+
+  function filterLocal(q) {
+    if (!q) return TOP.slice(0, 10);
+    const lq = q.toLowerCase();
+    return TOP.filter(c => c.name.toLowerCase().includes(lq) || c.symbol.toLowerCase().includes(lq));
+  }
+
+  async function searchAll(q) {
+    if (!allCoins) {
+      try {
+        const r = await fetch('https://api.coingecko.com/api/v3/coins/list');
+        if (r.ok) allCoins = await r.json();
+      } catch { return filterLocal(q); }
+    }
+    const lq = q.toLowerCase();
+    return (allCoins || []).filter(c =>
+      c.name.toLowerCase().includes(lq) || c.symbol.toLowerCase().includes(lq)
+    ).slice(0, 25);
+  }
+
+  cryptoInput.addEventListener('input', () => {
+    const q = cryptoInput.value.trim();
+    selectedCoin = null; simBtn.disabled = true; btnText.textContent = 'Sélectionner une crypto';
+    clearTimeout(debounceTimer);
+    renderDropdown(filterLocal(q));
+    if (q.length >= 2) {
+      debounceTimer = setTimeout(async () => renderDropdown(await searchAll(q)), 350);
+    }
+  });
+
+  cryptoInput.addEventListener('focus', () => { if (!cryptoInput.value) renderDropdown(TOP.slice(0, 10)); });
+  document.addEventListener('click', e => {
+    if (!$('crypto-wrapper').contains(e.target)) dropdown.classList.add('hidden');
+  });
+
+  async function fetchPrices(id) {
+    const urls = [
+      `/coins/${id}/market_chart?vs_currency=eur&days=max&interval=weekly`,
+      `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=eur&days=max&interval=weekly`,
+    ];
+    for (const url of urls) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) { const d = await r.json(); if (d.prices?.length) return d.prices; }
+      } catch {}
+    }
+    throw new Error('Données indisponibles. Vérifiez votre connexion et réessayez.');
+  }
+
+  function calcDCA(prices, montant, freq, fromDate, toDate) {
+    const fromMs = new Date(fromDate).getTime();
+    const toMs   = new Date(toDate).getTime();
+    const pts    = prices.filter(([ts]) => ts >= fromMs && ts <= toMs);
+    if (pts.length < 2) return null;
+
+    if (freq === 'once') {
+      const [, p0] = pts[0];
+      const units = montant / p0;
+      const last  = pts[pts.length-1][1];
+      return {
+        invested: montant, value: units * last,
+        totalUnits: units, avgPrice: p0,
+        purchaseCount: 1, freq,
+        chartData: pts.map(([ts,p]) => ({ date:new Date(ts), value:units*p, invested:montant })),
+      };
+    }
+
+    const iv = { daily:86400000, weekly:604800000, monthly:30*86400000 }[freq];
+    let inv=0, units=0, lastT=null, purchaseCount=0;
+    const chartData = [];
+    for (const [ts, p] of pts) {
+      if (p <= 0) continue;
+      if (lastT === null || (ts - lastT) >= iv) { units += montant/p; inv += montant; lastT = ts; purchaseCount++; }
+      chartData.push({ date:new Date(ts), value:units*p, invested:inv });
+    }
+    return {
+      invested:inv, value:units*pts[pts.length-1][1],
+      totalUnits: units, avgPrice: units > 0 ? inv/units : 0,
+      purchaseCount, freq,
+      chartData,
+    };
+  }
+
+  function fmt(n) {
+    const a = Math.abs(n);
+    if (a>=1e6) return '€' + (n/1e6).toFixed(2).replace('.',',') + ' M';
+    if (a>=1e3) return '€' + n.toLocaleString('fr-FR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+    return '€' + n.toFixed(2).replace('.',',');
+  }
+
+  function cryptoDisplay(units, symbol) {
+    const sym = symbol.toUpperCase();
+    if (sym === 'BTC') return '₿' + units.toFixed(8);
+    if (sym === 'ETH') return 'Ξ' + units.toFixed(6);
+    if (units < 0.001) return units.toFixed(8) + ' ' + sym;
+    return units.toFixed(6) + ' ' + sym;
+  }
+
+  const FREQ_LABEL = { weekly:'semaines', monthly:'mois', daily:'jours' };
+
+  function renderKPIs(r, coin) {
+    const perf = r.invested > 0 ? ((r.value - r.invested)/r.invested)*100 : 0;
+    $('kpi-invested').textContent = fmt(r.invested);
+    const subLabel = FREQ_LABEL[r.freq] ? `en ${r.purchaseCount} ${FREQ_LABEL[r.freq]}` : '';
+    $('kpi-invested-sub').textContent = subLabel;
+    $('kpi-acquired').textContent  = cryptoDisplay(r.totalUnits, coin.symbol);
+    $('kpi-avg-price').textContent = fmt(r.avgPrice);
+    $('kpi-value').textContent     = fmt(r.value);
+    const perfEl = $('kpi-perf');
+    perfEl.textContent = (perf>=0?'+':'') + perf.toFixed(2).replace('.',',') + '%';
+    perfEl.className = 'text-2xl font-bold ' + (perf>=0?'text-green-400':'text-red-400');
+  }
+
+  function renderChart(data, tab) {
+    const canvas = $('sim-chart');
+    $('chart-placeholder').classList.add('hidden');
+    canvas.classList.remove('hidden');
+    const step = Math.max(1, Math.floor(data.length/80));
+    const s = data.filter((_,i)=>i%step===0||i===data.length-1);
+    const labels = s.map(d=>d.date.toLocaleDateString('fr-FR',{year:'numeric',month:'short'}));
+
+    let datasets;
+    if (tab === 'gains') {
+      datasets = [{
+        label:'Gains / Pertes',
+        data: s.map(d=>d.value - d.invested),
+        borderColor:'#22c55e',
+        backgroundColor: ctx => {
+          const g = ctx.chart.ctx.createLinearGradient(0,0,0,ctx.chart.height);
+          g.addColorStop(0,'rgba(34,197,94,0.25)'); g.addColorStop(1,'rgba(34,197,94,0.02)'); return g;
+        },
+        borderWidth:2, tension:0.3, pointRadius:0, fill:true,
+      }];
+    } else {
+      datasets = [
+        { label:'Capital final',   data:s.map(d=>d.value),    borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)',   borderWidth:2, tension:0.3, pointRadius:0, fill:true },
+        { label:'Montant investi', data:s.map(d=>d.invested), borderColor:'#7dd3fc', backgroundColor:'rgba(125,211,252,0.04)', borderWidth:2, tension:0,   pointRadius:0, fill:true },
+      ];
+    }
+
+    if (chart) chart.destroy();
+    chart = new Chart(canvas.getContext('2d'), {
+      type:'line',
+      data:{ labels, datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{labels:{color:'#94a3b8',font:{size:12},boxWidth:20}},
+          tooltip:{
+            backgroundColor:'#1e293b', borderColor:'rgba(255,255,255,0.1)', borderWidth:1,
+            titleColor:'#94a3b8', bodyColor:'#fff',
+            callbacks:{label:ctx=>`${ctx.dataset.label} : ${fmt(ctx.parsed.y)}`},
+          },
+        },
+        scales:{
+          x:{ticks:{color:'#64748b',maxTicksLimit:10,font:{size:11}}, grid:{color:'rgba(255,255,255,0.04)'}},
+          y:{ticks:{color:'#64748b',callback:v=>fmt(v),font:{size:11}}, grid:{color:'rgba(255,255,255,0.04)'}},
+        },
+      },
+    });
+  }
+
+  simBtn.addEventListener('click', async () => {
+    if (!selectedCoin) return;
+    errMsg.classList.add('hidden');
+    kpiLoading.classList.remove('hidden');
+    $('kpi-grid').style.opacity = '0.3';
+    simBtn.disabled = true;
+    btnText.textContent = 'Calcul…';
+    try {
+      const prices = await fetchPrices(selectedCoin.id);
+      const result = calcDCA(prices, parseFloat(montantEl.value)||100, freqEl.value, fromEl.value, toEl.value);
+      if (!result) { showErr('Pas assez de données sur la période sélectionnée.'); return; }
+      lastResult = result;
+      kpiLoading.classList.add('hidden');
+      $('kpi-grid').style.opacity = '1';
+      renderKPIs(result, selectedCoin);
+      renderChart(result.chartData, activeTab);
+    } catch(e) {
+      showErr(e.message);
+    } finally {
+      simBtn.disabled = false;
+      btnText.textContent = 'Simuler';
+      kpiLoading.classList.add('hidden');
+      $('kpi-grid').style.opacity = '1';
+    }
+  });
+
+  function showErr(msg) { errMsg.textContent = msg; errMsg.classList.remove('hidden'); }
+
+  [montantEl, freqEl, fromEl, toEl].forEach(el => {
+    el.addEventListener('change', () => { if (selectedCoin && !simBtn.disabled) simBtn.click(); });
+  });
+
+})();
+
+function openSidebar()  { document.getElementById('mobile-sidebar').classList.add('open');    document.getElementById('overlay').classList.add('open'); }
+function closeSidebar() { document.getElementById('mobile-sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+</script>
+</body>
+</html>

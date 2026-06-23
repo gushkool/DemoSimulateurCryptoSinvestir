@@ -1,0 +1,39 @@
+# Secrets & auth
+.env
+.env.*
+.claude/.auth/
+
+# Logs & session artifacts
+.claude/logs/
+.claude/_screenshots/
+
+# Dumps (régénérables via page-fetcher, parfois lourds et/ou sous licence)
+.claude/dumps/
+
+# Deps
+node_modules/
+
+# Build
+.next/
+out/
+build/
+
+# Debug/investigation scripts (session artifacts, not part of deliverable)
+scripts/audit-*.mjs
+scripts/probe-*.mjs
+scripts/capture-*.mjs
+scripts/dump-bootstrap-tasks.mjs
+scripts/dump-crypto-wait.mjs
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+coverage/
+.nyc_output/
