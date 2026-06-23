@@ -5,8 +5,8 @@ Test technique pour S'investir — transposition du simulateur crypto aux standa
 > 📌 **Deadline** : mercredi 1er juillet 2026 à 23h59
 > 📄 **Brief complet** : voir [`.claude/briefs/demande.md`](./.claude/briefs/demande.md)
 
-**Démo en ligne** : `[URL_VERCEL_PLACEHOLDER]`
-**Repo GitHub** : `[URL_GITHUB_PLACEHOLDER]`
+**Démo en ligne** : https://dist-lldqvbtaz-labo102.vercel.app
+**Repo GitHub** : https://github.com/gushkool/DemoSimulateurCryptoSinvestir
 
 ## Workflow Claude Code
 
